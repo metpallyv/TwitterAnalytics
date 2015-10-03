@@ -13,6 +13,7 @@ The reason for this project is that I want to perform two things using Twitter t
 
 #Twitter Crawler 
 This application does the following using Twitter REST APIs:
+
 1. Authenticates my twitter application(MiningInfo) for Analytics on Twitter using OAuth
 2. Returns entire Twitter profile information based on the username/twitter-id provided
 3. Returns Twitter followers info (names,twitter ids, etc) for each twitter user/twitter-id provided.
