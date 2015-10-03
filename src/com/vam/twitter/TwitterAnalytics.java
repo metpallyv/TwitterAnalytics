@@ -46,6 +46,7 @@ public class TwitterAnalytics {
 	public static final int USERS_SEARCH = 4;
 	public static final int FRIEND_ID = 5;
 	public static final int SEARCH_QUERIES = 6;
+	public static final int RETWEETS = 7;
 	public static String USER_TIMELINE = "/statuses/user_timeline";
 	public static String FOLLOWERS = "/followers/list";
 	public static String FRIENDS = "/friends/list";
@@ -62,7 +63,7 @@ public class TwitterAnalytics {
 	//file handlers to store the collected user information
 	BufferedWriter OutFileWriter;
 	OAuthTokenSecret OAuthTokens;
-	
+
 	 // name of the file containing a list of users
 	final String DEF_FILENAME = "politician.txt";
 
@@ -82,7 +83,7 @@ public class TwitterAnalytics {
 		return consumer;
 	}
 
-	//OAuth authentication for the appplication 
+	//OAuth authentication for the appplication
 
 	public OAuthTokenSecret GetUserAccessKeySecret()
 	{
@@ -161,8 +162,8 @@ public class TwitterAnalytics {
 	{
 		OAuthTokens =  this.GetUserAccessKeySecret();
 	}
-	
-	
+
+
 	/**
 	 * Retrieves the rate limit status of the application
 	 * @return
@@ -172,7 +173,7 @@ public class TwitterAnalytics {
 		try{
 			URL url = new URL("https://api.twitter.com/1.1/application/rate_limit_status.json");
 			HttpURLConnection huc = (HttpURLConnection) url.openConnection();
-			huc.setReadTimeout(5000);           
+			huc.setReadTimeout(5000);
 			Consumer.sign(huc);
 			huc.connect();
 			BufferedReader bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getContent()));
@@ -202,7 +203,6 @@ public class TwitterAnalytics {
 
 	/**
 	 * Initialize the file writer
-	 * @param path of the file
 	 * @param outFilename name of the file
 	 */
 	public void InitializeWriters(String outFilename) {
@@ -272,7 +272,7 @@ public class TwitterAnalytics {
 			if(huc.getResponseCode()==404||huc.getResponseCode()==401)
 			{
 				System.out.println(huc.getResponseMessage());
-			}           
+			}
 			else
 				if(huc.getResponseCode()==500||huc.getResponseCode()==502||huc.getResponseCode()==503)
 				{
@@ -402,11 +402,88 @@ public class TwitterAnalytics {
 			ex.printStackTrace();
 		} catch (OAuthExpectationFailedException ex) {
 			ex.printStackTrace();
-		} catch (IOException ex) {              
+		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
 		return profile;
 	}
+
+	public JSONArray GetReTweets(String username)
+		{
+			BufferedReader bRead = null;
+			JSONArray retweets = new JSONArray();
+			try {
+				System.out.println(" followers user = " + username);
+				long cursor = -1;
+				while (true) {
+					if (cursor == 0) {
+						break;
+					}
+					// Step 1: Create the APi request using the supplied username
+					URL url = new URL("https://api.twitter.com/1.1/statuses/retweets/" + username + "&cursor=" + cursor + "&count=1000000");
+					//URL url = new URL("https://api.twitter.com/1.1/followers/ids.json?screen_name="+username+"&cursor="+cursor);
+					HttpURLConnection huc = (HttpURLConnection) url.openConnection();
+					huc.setReadTimeout(5000);
+					// Step 2: Sign the request using the OAuth Secret
+					Consumer.sign(huc);
+					huc.connect();
+					if (huc.getResponseCode() == 400 || huc.getResponseCode() == 404) {
+						System.out.println(huc.getResponseMessage());
+						break;
+					} else if (huc.getResponseCode() == 500 || huc.getResponseCode() == 502 || huc.getResponseCode() == 503 || huc.getResponseCode() == 504) {
+						try {
+							System.out.println(huc.getResponseMessage());
+							huc.disconnect();
+							Thread.sleep(3000);
+							continue;
+						} catch (InterruptedException ex) {
+							Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+						}
+					} else
+						// Step 3: If the requests have been exhausted, then wait until the quota is renewed
+						if (huc.getResponseCode() == 429) {
+							huc.disconnect();
+							try {
+								Thread.sleep(this.GetWaitTime("/statuses/retweets/" + username));
+							} catch (InterruptedException ex) {
+								Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+							}
+							continue;
+						}
+					// Step 4: Retrieve the retweets from Twitter
+					bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getContent()));
+					StringBuilder content = new StringBuilder();
+					String temp = "";
+					while ((temp = bRead.readLine()) != null) {
+						content.append(temp);
+					}
+					try {
+						JSONObject jobj = new JSONObject(content.toString());
+						// Step 5: Retrieve the token for the next request
+						cursor = jobj.getLong("next_cursor");
+						JSONArray idlist = jobj.getJSONArray("users");
+						if (idlist.length() == 0) {
+							break;
+						}
+						for (int i = 0; i < idlist.length(); i++) {
+							retweets.put(idlist.getJSONObject(i));
+						}
+					} catch (JSONException ex) {
+						Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+					}
+				}
+			} catch (OAuthCommunicationException ex) {
+				ex.printStackTrace();
+			} catch (OAuthMessageSignerException ex) {
+				ex.printStackTrace();
+			} catch (OAuthExpectationFailedException ex) {
+				ex.printStackTrace();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+			return retweets;
+		}
+
 	/**
 	 * Retrieves the id's of followers of a user
 	 * @param username the name of the user whose followers need to be retrieved
@@ -494,7 +571,7 @@ public class TwitterAnalytics {
 			ex.printStackTrace();
 		} catch (OAuthExpectationFailedException ex) {
 			ex.printStackTrace();
-		} catch (IOException ex) {              
+		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
 		return followers;
@@ -518,7 +595,7 @@ public class TwitterAnalytics {
 			long maxid = 0;
 			while(true)
 			{
-				URL url = null;                    
+				URL url = null;
 				if(maxid==0)
 				{
 					url = new URL("https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + username+"&include_rts="+include_rts+"&count="+tweetcount);
@@ -674,7 +751,7 @@ public class TwitterAnalytics {
 					}
 				} catch (JSONException ex) {
 					ex.printStackTrace();
-				}               
+				}
 				huc.disconnect();
 			}
 		} catch (OAuthCommunicationException ex) {
@@ -699,7 +776,7 @@ public class TwitterAnalytics {
 		JSONObject jobj = this.GetRateLimitStatus();
 		if(jobj!=null)
 		{
-			try {                
+			try {
 				if(!jobj.isNull("resources"))
 				{
 					JSONObject resourcesobj = jobj.getJSONObject("resources");
@@ -727,13 +804,17 @@ public class TwitterAnalytics {
 									JSONObject userobj = resourcesobj.getJSONObject("users");
 									apilimit = userobj.getJSONObject(api);
 								}
-					
-								else if(!jobj.isNull("resources"))
+
+								else if(api.equals(SEARCH_QUERIES))
 								{
-	                    
+
 									JSONObject statusobj = resourcesobj.getJSONObject("statuses");
 									apilimit = statusobj.getJSONObject(api);
-	                   
+
+								}
+								else if(api.equals(RETWEETS)) {
+									JSONObject retweetsobj = resourcesobj.getJSONObject("statuses");
+									apilimit = retweetsobj.getJSONObject(api);
 								}
 					int numremhits = apilimit.getInt("remaining");
 					if(numremhits<=1)
@@ -751,96 +832,96 @@ public class TwitterAnalytics {
 	}
 
 	   /**
-     * Creates an OR search query from the supplied terms
-     * @param queryTerms
-     * @return a String formatted as term1 OR term2
-     */
-    public String CreateORQuery(ArrayList<String> queryTerms)
-    {
-        String OR_Operator = " OR ";
-        StringBuffer querystr = new StringBuffer();
-        int count = 1;
-        for(String term:queryTerms)
-        {
-            if(count==1)
-            {
-                querystr.append(term);
-            }
-            else
-            {
-                querystr.append(OR_Operator).append(term);
-            }
-        }
-        return querystr.toString();
-    }
+	 * Creates an OR search query from the supplied terms
+	 * @param queryTerms
+	 * @return a String formatted as term1 OR term2
+	 */
+	public String CreateORQuery(ArrayList<String> queryTerms)
+	{
+		String OR_Operator = " OR ";
+		StringBuffer querystr = new StringBuffer();
+		int count = 1;
+		for(String term:queryTerms)
+		{
+			if(count==1)
+			{
+				querystr.append(term);
+			}
+			else
+			{
+				querystr.append(OR_Operator).append(term);
+			}
+		}
+		return querystr.toString();
+	}
 
 	  /**
-     * Fetches tweets matching a query
-     * @param query for which tweets need to be fetched
-     * @return an array of status objects
-     */
-    public JSONArray GetSearchResults(String query)
-    {
-        try{
-            //construct the request url
-            String URL_PARAM_SEPERATOR = "&";
-            StringBuilder url = new StringBuilder();
-            url.append("https://api.twitter.com/1.1/search/tweets.json?q=");
-            //query needs to be encoded
-            url.append(URLEncoder.encode(query, "UTF-8"));
-            url.append(URL_PARAM_SEPERATOR);
-            url.append("count=100");
-            URL navurl = new URL(url.toString());
-            HttpURLConnection huc = (HttpURLConnection) navurl.openConnection();
-            huc.setReadTimeout(5000);
-            Consumer.sign(huc);
-            huc.connect();
-            if(huc.getResponseCode()==400||huc.getResponseCode()==404||huc.getResponseCode()==429)
-            {
-                System.out.println(huc.getResponseMessage());
-                try {
-                    huc.disconnect();
-                    Thread.sleep(this.GetWaitTime("/friends/list"));
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            if(huc.getResponseCode()==500||huc.getResponseCode()==502||huc.getResponseCode()==503)
-            {
-                System.out.println(huc.getResponseMessage());
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-            BufferedReader bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getInputStream()));
-            String temp;
-            StringBuilder page = new StringBuilder();
-            while( (temp = bRead.readLine())!=null)
-            {
-                page.append(temp);
-            }
-            JSONTokener jsonTokener = new JSONTokener(page.toString());
-            try {
-                JSONObject json = new JSONObject(jsonTokener);
-                JSONArray results = json.getJSONArray("statuses");
-                return results;
-            } catch (JSONException ex) {
-                Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
-            }            
-        } catch (OAuthCommunicationException ex) {
-            Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (OAuthMessageSignerException ex) {
-            Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (OAuthExpectationFailedException ex) {
-            Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
-        }catch(IOException ex)
-        {
-            ex.printStackTrace();
-        }
-        return null;
-    }
+	 * Fetches tweets matching a query
+	 * @param query for which tweets need to be fetched
+	 * @return an array of status objects
+	 */
+	public JSONArray GetSearchResults(String query)
+	{
+		try{
+			//construct the request url
+			String URL_PARAM_SEPERATOR = "&";
+			StringBuilder url = new StringBuilder();
+			url.append("https://api.twitter.com/1.1/search/tweets.json?q=");
+			//query needs to be encoded
+			url.append(URLEncoder.encode(query, "UTF-8"));
+			url.append(URL_PARAM_SEPERATOR);
+			url.append("count=100");
+			URL navurl = new URL(url.toString());
+			HttpURLConnection huc = (HttpURLConnection) navurl.openConnection();
+			huc.setReadTimeout(5000);
+			Consumer.sign(huc);
+			huc.connect();
+			if(huc.getResponseCode()==400||huc.getResponseCode()==404||huc.getResponseCode()==429)
+			{
+				System.out.println(huc.getResponseMessage());
+				try {
+					huc.disconnect();
+					Thread.sleep(this.GetWaitTime("/friends/list"));
+				} catch (InterruptedException ex) {
+					ex.printStackTrace();
+				}
+			}
+			if(huc.getResponseCode()==500||huc.getResponseCode()==502||huc.getResponseCode()==503)
+			{
+				System.out.println(huc.getResponseMessage());
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException ex) {
+					Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+				}
+			}
+			BufferedReader bRead = new BufferedReader(new InputStreamReader((InputStream) huc.getInputStream()));
+			String temp;
+			StringBuilder page = new StringBuilder();
+			while( (temp = bRead.readLine())!=null)
+			{
+				page.append(temp);
+			}
+			JSONTokener jsonTokener = new JSONTokener(page.toString());
+			try {
+				JSONObject json = new JSONObject(jsonTokener);
+				JSONArray results = json.getJSONArray("statuses");
+				return results;
+			} catch (JSONException ex) {
+				Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+			}
+		} catch (OAuthCommunicationException ex) {
+			Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+		} catch (OAuthMessageSignerException ex) {
+			Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+		} catch (OAuthExpectationFailedException ex) {
+			Logger.getLogger(TwitterAnalytics.class.getName()).log(Level.SEVERE, null, ex);
+		}catch(IOException ex)
+		{
+			ex.printStackTrace();
+		}
+		return null;
+	}
 public static void main(String[] args) {
 		TwitterAnalytics t = new TwitterAnalytics();
 		t.LoadTwitterToken();
@@ -852,6 +933,7 @@ public static void main(String[] args) {
 		//  int apicode = FOLLOWER_INFO;
 		// int apicode = STATUSES_INFO;
 		//int apicode = SEARCH_QUERIES;
+		//int apicode = RETWEETS;
 		int apicode = FRIEND_ID;
 		String infilename = t.DEF_FILENAME;
 		// String outfilename = t.DEF_OUTFILENAME;
@@ -876,9 +958,9 @@ public static void main(String[] args) {
 		}
 		// t.InitializeWriters(outfilename);
 		t.ReadUsers(infilename);
-		if(apicode!=PROFILE_INFO&&apicode!=FOLLOWER_INFO&&apicode!=FRIEND_INFO&&apicode!=STATUSES_INFO&&apicode!=FRIEND_ID&&apicode!=SEARCH_QUERIES)
+		if(apicode!=PROFILE_INFO&&apicode!=FOLLOWER_INFO&&apicode!=FRIEND_INFO&&apicode!=STATUSES_INFO&&apicode!=FRIEND_ID&&apicode!=SEARCH_QUERIES&&apicode!=RETWEETS)
 		{
-			System.out.println("Invalid API type: Use 0 for Profile, 1 for Followers, 2 for Friends, and 3 for Statuses, 4 for Users Search , 5 for Friend ids , 6 for Searching on Twitter using terms");
+			System.out.println("Invalid API type: Use 0 for Profile, 1 for Followers, 2 for Friends, and 3 for Statuses, 4 for Users Search , 5 for Friend ids , 6 for Searching on Twitter using terms, 7 for Retweets by a user");
 			System.exit(0);
 		}
 		if(t.Terms.size()>0)
@@ -902,7 +984,7 @@ public static void main(String[] args) {
 			for(String term:t.Terms)
 			{
 
-				final String outfilename = "C:\\Vardhaman stuff\\MS subjects\\Data Mining in Social Networks\\Research\\crawlerID_new\\"+term+"\\"+term+"_friendids2.json";
+				final String outfilename = "Output\\"+term+"\\"+term+"_retweets.json";
 				t.InitializeWriters(outfilename);
 
 				if(apicode==PROFILE_INFO)
@@ -915,6 +997,16 @@ public static void main(String[] args) {
 					// System.out.println(jobj.toString());
 				}
 				else
+					if(apicode==FOLLOWER_INFO)
+					{
+						JSONArray statusarr = t.GetFollowers(term);
+						if(statusarr.length()>0)
+						{
+							t.WriteToFile(term, statusarr.toString());
+						}
+					}
+
+					else
 					if(apicode==FRIEND_INFO)
 					{
 						JSONArray statusarr = t.GetFriends(term);
@@ -932,30 +1024,32 @@ public static void main(String[] args) {
 								t.WriteToFile(term, jobj.toString());
 							}
 						}
+
 						else
-							if(apicode == FOLLOWER_INFO)
+						if(apicode == RETWEETS)
+						{
+							JSONArray statusarr = t.GetReTweets(term);
+							if(statusarr.length()>0)
 							{
-								JSONArray statusarr = t.GetFollowers(term);
-								if(statusarr.length()>0)
-								{
-									t.WriteToFile(term, statusarr.toString());
-								}
+								t.WriteToFile(term, statusarr.toString());
 							}
+						}
+
 							else
 								if(apicode == SEARCH_QUERIES)
 								{
 									JSONArray results = t.GetSearchResults(t.CreateORQuery(queryterms));
-							        if(results!=null)
-							        {
-							            t.WriteToFile(term, results.toString());
-							        }
+									if(results!=null)
+									{
+										t.WriteToFile(term, results.toString());
+									}
 								}
 
 							else
 								if(apicode == STATUSES_INFO)
 								{
 									JSONArray statusarr = t.GetStatuses(term);
-									
+
 									//JSONArray statusarr = new JSONArray(content.toString());
 									if(statusarr.length()==0)
 									{
