@@ -42,8 +42,8 @@ I use the following for my Sentiment classification:
          6. Replace a word contains @someuser with AT_USER so that we can treat all the users the same
          7. Ignore words that don't start with an alphabet
          8. Use the stop words list to filter out low value words such as 'the', 'is' and 'on'.
-         9. add all the positive tweets to positive_tweet file
-         10.add all the negative tweets to negative_tweet file
+         9. add all the positive tweets to positive_tweet file, where each line is a preprocessed tweet
+         10.add all the negative tweets to negative_tweet file, where each line is a preprocessed tweet
 
 2. I run my sentiment classification on the following classifiers:
 
