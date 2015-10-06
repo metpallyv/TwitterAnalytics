@@ -27,4 +27,33 @@ crawls through each and every US congressmen's Twitter account and
     2. Tweets for each US congressmen
     3. Retweets for each US congressmen.
 
+#Sentiment Analysis using Nltk/Scikit
+This application predicts the sentiments of Tweets as 'positive' or 'negative' using natural language processing and machine learning techniques:
+
+I use the following for my Sentiment classification:
+
+1. I performed the following preprocessing to my tweets :
+
+         1.Lowercase all characters
+         2. Apply stemming using Porter Stemmer.
+         3. Strip punctuations
+         4. Replace #xyz with xyz
+         5. Replace a word contains www. or http(s):// with URL so that we can treat all the urls the same
+         6. Replace a word contains @someuser with AT_USER so that we can treat all the users the same
+         7. Ignore words that don't start with an alphabet
+         8. Use the stop words list to filter out low value words such as 'the', 'is' and 'on'.
+         9. add all the positive tweets to positive_tweet file
+         10.add all the negative tweets to negative_tweet file
+
+2. I run my sentiment classification on the following classifiers:
+
+         a. MultinomailNB scikit classifier
+         b. Logistic Regression scikit classifier
+         c. Linear Support Vector Machine scikit classifier
+
+3. To improve the accuracy, I considered only the most k informative terms(unigrams + bigrams) as features instead of entire corpus as features
+
+         The size of k choosen is : 500','1000','2500','5000','10000', '15000' 
+
+4. I basically referred this link before implementing it : http://www.laurentluce.com/posts/twitter-sentiment-analysis-using-python-and-nltk/
 
