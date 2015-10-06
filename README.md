@@ -51,7 +51,7 @@ I use the following for my Sentiment classification:
          b. Logistic Regression scikit classifier
          c. Linear Support Vector Machine scikit classifier
 
-3. To improve the accuracy, I considered only the most k informative terms(unigrams + bigrams) as features instead of entire corpus as features
+3. To improve the accuracy, I considered only the most k informative terms(unigrams + bigrams) as features instead of entire corpus as features. Selection of most informative features is done using Chi-sqaure test
 
          The size of k choosen is : 500','1000','2500','5000','10000', '15000' 
 
