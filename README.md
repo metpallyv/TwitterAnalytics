@@ -57,7 +57,7 @@ I use the following for my Sentiment classification:
 
 4. I basically referred this link before implementing it : http://www.laurentluce.com/posts/twitter-sentiment-analysis-using-python-and-nltk/
 
-#Application to explore US politician's view on a subject based on his/her Social Interaction
+#Explore US politician's view on a subject based on his/her Social Interaction
 
 The goal is to explore 487 U.S. politicians stance/view on a particular topic/subject based on their twitter interaction.
 
