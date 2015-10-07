@@ -57,3 +57,19 @@ I use the following for my Sentiment classification:
 
 4. I basically referred this link before implementing it : http://www.laurentluce.com/posts/twitter-sentiment-analysis-using-python-and-nltk/
 
+#Application to explore US politician's view on a subject based on his/her Social Interaction
+
+The goal is to explore 487 U.S. politicians stance/view on a particular topic/subject based on their twitter interaction.
+
+1. Of the entire set, 265 people are Republicans and 222 people are Democrats. I get all politicians tweets/retweets .Due to the    API limit, I could collect only around 3,300 most recent tweets for each user. This results in a dataset of 487 U.S.             politicians and 713,830 tweets.
+
+2. Out of these tweets, I generated the top tweeted topics using LDA(Latent Dirichlet Allocation) using gensim and nltk libraries.
+         Results for top 5 topics  using LDA are: 
+
+               Topic    Top words
+               1        House, Senate
+               2        Jobs, Congress
+               3        Energy, Support
+               4        Bill, Vote
+               5        Budget, Obamacare
+3. Now for these topics, I establish each politician's stance based on his/her tweets for that particular topic using sentiment    analysis as described above
