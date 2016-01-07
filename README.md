@@ -7,9 +7,8 @@ The reason for this project is that I want to perform two things using Twitter t
 
 2. I wanted to estimate US Congressmen's stance on a particular political issue/bill. For example, 
    I want to capture Donald Trump's political ideology using his tweets and friends information on Twitter. 
-   Furthermore, if we make use of the text information of users’ tweets, especially retweets, to better understand political       figure’s emphasis on different topics. If Donald Trump follows Hillary CLinton on Twitter and if he retweets lots of
-   postive tweets of Hillary clinton related to Iran Nuke bill, we can predict that Donald Trump would vote postively for 
-   that Iran Nuke bill.
+   Furthermore, if we make use of the text information of users’ tweets, especially retweets, to better understand political        figure’s emphasis on different topics. Hypothetically,If Donald Trump follows Hillary CLinton on twitter and if he retweets lots of
+   postive tweets of Hillary clinton related to Iran Nuke bill, we can predict that Donald Trump's stance on Iran Nuke bill topic is  positive. Similarly, I try to establish every congressman's stance on a particular topic using his/her twitter interaction.
 
 #Twitter Crawler 
 This application does the following using Twitter REST APIs:
@@ -45,17 +44,17 @@ I use the following for my Sentiment classification:
          9. add all the positive tweets to positive_tweet file, where each line is a preprocessed tweet
          10.add all the negative tweets to negative_tweet file, where each line is a preprocessed tweet
 
-2. I run my sentiment classification on the following classifiers:
-
-         a. MultinomailNB scikit classifier
-         b. Logistic Regression scikit classifier
-         c. Linear Support Vector Machine scikit classifier
+2. Generated semi-supervised labelled data using emoticons, common positive/negative words and manual annotation.
 
 3. To improve the accuracy, I considered only the most k informative terms(unigrams + bigrams) as features instead of entire corpus as features. Selection of most informative features is done using Chi-sqaure test
 
          The size of k choosen is : 500','1000','2500','5000','10000', '15000' 
 
-4. I basically referred this link before implementing it : http://www.laurentluce.com/posts/twitter-sentiment-analysis-using-python-and-nltk/
+4. I run my sentiment classification on the following classifiers:
+
+         a. MultinomailNB scikit classifier
+         b. Logistic Regression scikit classifier
+         c. Linear Support Vector Machine scikit classifier
 
 #Explore US politician's view on a subject based on his/her Social Interaction
 
